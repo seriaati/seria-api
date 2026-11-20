@@ -98,7 +98,7 @@ async def list_sponsors():
             continue
         member = guild.get_member(user_id)
         if member is None:
-            continue
+            member = await bot.fetch_user(user_id)
         members.append(
             {
                 "id": str(member.id),
