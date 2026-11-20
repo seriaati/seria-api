@@ -2,11 +2,13 @@ import hmac
 
 from fastapi import APIRouter, Depends, HTTPException, Security
 from fastapi.security import APIKeyHeader
+from cachetools import TTLCache
 
 from .bot import bot
 from .config import settings
 
 router = APIRouter()
+user_cache = TTLCache(maxsize=250, ttl=60 * 60)
 
 _api_key_header = APIKeyHeader(name="x-api-key")
 
@@ -96,9 +98,14 @@ async def list_sponsors():
     for user_id in settings.EXTRA_SPONSOR_USER_IDS:
         if user_id in seen_ids:
             continue
+
         member = guild.get_member(user_id)
         if member is None:
-            member = bot.get_user(user_id)
+            member = user_cache.get(user_id)
+        if member is None:
+            member = await bot.fetch_user(user_id)
+            user_cache[user_id] = member
+
         members.append(
             {
                 "id": str(member.id),
