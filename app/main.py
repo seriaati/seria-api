@@ -15,8 +15,9 @@ async def lifespan(app: FastAPI):
     await app.state.db.execute(
         "CREATE TABLE IF NOT EXISTS extra_sponsors (user_id BIGINT PRIMARY KEY)"
     )
+    bot.db = app.state.db
 
-    task = asyncio.create_task(bot.start(settings.BOT_TOKEN))
+    task =asyncio.create_task(bot.start(settings.BOT_TOKEN))
     # Yield to the event loop so bot.start() can begin login before wait_until_ready()
     await asyncio.sleep(0)
     await bot.wait_until_ready()
