@@ -6,7 +6,7 @@ class Settings(BaseSettings):
     BOT_TOKEN: str
     SPONSOR_ROLE_ID: int
     API_KEY: str
-    EXTRA_SPONSOR_USER_IDS: list[int] = []
+    DATABASE_URL: str
 
     model_config = SettingsConfigDict(env_file=".env")
 

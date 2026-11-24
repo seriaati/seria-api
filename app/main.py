@@ -1,6 +1,7 @@
 import asyncio
 from contextlib import asynccontextmanager, suppress
 
+import asyncpg
 from fastapi import FastAPI
 
 from .bot import bot
@@ -9,7 +10,12 @@ from .routes import router
 
 
 @asynccontextmanager
-async def lifespan(_app: FastAPI):
+async def lifespan(app: FastAPI):
+    app.state.db = await asyncpg.create_pool(settings.DATABASE_URL)
+    await app.state.db.execute(
+        "CREATE TABLE IF NOT EXISTS extra_sponsors (user_id BIGINT PRIMARY KEY)"
+    )
+
     task = asyncio.create_task(bot.start(settings.BOT_TOKEN))
     # Yield to the event loop so bot.start() can begin login before wait_until_ready()
     await asyncio.sleep(0)
@@ -19,6 +25,7 @@ async def lifespan(_app: FastAPI):
     task.cancel()
     with suppress(asyncio.CancelledError):
         await task
+    await app.state.db.close()
 
 
 app = FastAPI(lifespan=lifespan, docs_url=None, redoc_url=None)

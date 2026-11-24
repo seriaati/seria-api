@@ -1,6 +1,6 @@
 import hmac
 
-from fastapi import APIRouter, Depends, HTTPException, Security
+from fastapi import APIRouter, Depends, HTTPException, Request, Security
 from fastapi.security import APIKeyHeader
 from cachetools import TTLCache
 
@@ -71,7 +71,7 @@ async def list_role_members(role_id: int):
 
 
 @router.get("/sponsors", dependencies=[Depends(verify_api_key)])
-async def list_sponsors():
+async def list_sponsors(request: Request):
     guild = bot.get_guild(settings.GUILD_ID)
     if guild is None:
         raise HTTPException(status_code=503, detail="Guild not available")
@@ -95,7 +95,9 @@ async def list_sponsors():
             }
         )
 
-    for user_id in settings.EXTRA_SPONSOR_USER_IDS:
+    rows = await request.app.state.db.fetch("SELECT user_id FROM extra_sponsors")
+    for row in rows:
+        user_id = row["user_id"]
         if user_id in seen_ids:
             continue
 
