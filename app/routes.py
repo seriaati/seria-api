@@ -3,6 +3,7 @@ import hmac
 from fastapi import APIRouter, Depends, HTTPException, Request, Security
 from fastapi.security import APIKeyHeader
 from cachetools import TTLCache
+from pydantic import BaseModel
 
 from .bot import bot
 from .config import settings
@@ -11,6 +12,10 @@ router = APIRouter()
 user_cache = TTLCache(maxsize=250, ttl=60 * 60)
 
 _api_key_header = APIKeyHeader(name="x-api-key")
+
+
+class ExtraSponsorsIn(BaseModel):
+    user_ids: list[int]
 
 
 def verify_api_key(api_key: str = Security(_api_key_header)) -> None:
@@ -120,3 +125,13 @@ async def list_sponsors(request: Request):
         )
 
     return members
+
+
+@router.post("/sponsors/extra", dependencies=[Depends(verify_api_key)])
+async def add_extra_sponsors(body: ExtraSponsorsIn, request: Request):
+    rows = await request.app.state.db.fetch(
+        "INSERT INTO extra_sponsors (user_id) SELECT unnest($1::bigint[]) "
+        "ON CONFLICT DO NOTHING RETURNING user_id",
+        body.user_ids,
+    )
+    return {"added": [str(row["user_id"]) for row in rows]}
